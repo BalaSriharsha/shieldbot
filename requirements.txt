@@ -1,0 +1,22 @@
+# CLI + Terminal UI
+click>=8.1.0
+rich>=13.0.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Security scanners
+semgrep>=1.50.0
+bandit>=1.7.0
+ruff>=0.1.0
+detect-secrets>=1.4.0
+pip-audit>=2.6.0
+
+# Git introspection
+GitPython>=3.1.0
+
+# Async support
+anyio>=4.0.0
+
+# Report generation
+jinja2>=3.0.0

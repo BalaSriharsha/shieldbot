@@ -17,8 +17,10 @@ All scanners run **in parallel**. Findings are deduplicated across scanners (sam
 
 ## Installation
 
-```bash
+```
+/plugin marketplace add BalaSriharsha/shieldbot
 /plugin install shieldbot
+/reload-plugins
 ```
 
 Requires `uvx` (comes with `uv`):
@@ -32,11 +34,11 @@ The MCP server (`shieldbot-mcp`) installs automatically on first use via `uvx`.
 
 ### Slash command
 ```
-/shieldbot-scan .
-/shieldbot-scan /path/to/repo
-/shieldbot-scan . --min-severity high
-/shieldbot-scan . --skip ruff --skip bandit
-/shieldbot-scan . --git-history
+/shieldbot .
+/shieldbot /path/to/repo
+/shieldbot . --min-severity high
+/shieldbot . --skip ruff --skip bandit
+/shieldbot . --git-history
 ```
 
 ### Natural language
@@ -85,7 +87,7 @@ The following tools must be on your `PATH`:
 | gitleaks *(optional)* | `brew install gitleaks` |
 | npm *(optional)* | Install [Node.js](https://nodejs.org) |
 
-Run `/shieldbot-scan check-tools` to see which are installed.
+Run `/shieldbot check-tools` to see which are installed.
 
 ## Languages supported
 

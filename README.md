@@ -1,47 +1,66 @@
-# shieldbot-mcp
+# Shieldbot — AI Security Code Review for Claude Code
 
-AI-powered security code review MCP server for Claude Code.
+[![PyPI](https://img.shields.io/pypi/v/shieldbot-mcp)](https://pypi.org/project/shieldbot-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 
-Combines **Semgrep (5,000+ rules)**, bandit, ruff, detect-secrets, pip-audit, and npm-audit with Claude's security expertise to deliver prioritized, actionable security reports.
+**Shieldbot** is an AI-powered security scanner that runs directly inside [Claude Code](https://claude.ai/code). It combines 5,000+ static analysis rules with Claude's reasoning to detect vulnerabilities, hardcoded secrets, and CVE-affected dependencies — then synthesizes findings into a prioritized, actionable report.
 
-## Install
+> One command. Full security audit. Zero context switching.
 
-```bash
-pip install shieldbot-mcp
+---
+
+## What It Scans
+
+| Scanner | What It Catches |
+|---------|----------------|
+| **Semgrep** (5,000+ rules) | OWASP Top 10, CWE Top 25, SQL injection, XSS, SSRF, command injection, taint analysis |
+| **Bandit** | Python-specific security flaws (hardcoded passwords, weak crypto, shell injection) |
+| **Ruff** | Python code quality and security anti-patterns |
+| **detect-secrets** | API keys, tokens, passwords, private keys in source code |
+| **pip-audit** | Python dependency CVEs (PyPI Advisory Database) |
+| **npm audit** | Node.js dependency CVEs |
+
+All scanners run **in parallel**. Findings are deduplicated, ranked by exploitability, and explained in plain English.
+
+---
+
+## Install as a Claude Code Plugin (Recommended)
+
+**Step 1 — Add the Shieldbot marketplace:**
+```
+/plugin marketplace add BalaSriharsha/shieldbot
 ```
 
-Or run directly via `uvx` (recommended for MCP):
-```bash
-uvx shieldbot-mcp
-```
-
-## Usage with Claude Code
-
-Install the plugin:
+**Step 2 — Install the plugin:**
 ```
 /plugin install shieldbot
 ```
 
-Then ask Claude naturally:
-- *"scan this repo for security issues"*
-- *"check for hardcoded secrets"*
-- *"audit my dependencies for CVEs"*
-
-Or use the slash command:
+**Step 3 — Reload plugins:**
 ```
-/shieldbot-scan .
-/shieldbot-scan /path/to/repo --min-severity high
-/shieldbot-scan . --git-history
+/reload-plugins
 ```
 
-## MCP tools exposed
+**Step 4 — Run a scan:**
+```
+/shieldbot .
+/shieldbot /path/to/repo
+/shieldbot . --min-severity critical
+/shieldbot . --git-history
+```
 
-| Tool | Description |
-|------|-------------|
-| `scan_repository` | Full parallel security scan → JSON report |
-| `check_scanner_tools` | Check which scanners are installed |
+Or just ask Claude naturally:
+- *"scan this repo for security vulnerabilities"*
+- *"check my code for hardcoded secrets"*
+- *"audit my Python dependencies for CVEs"*
 
-## Add to any MCP client
+---
+
+## Install as a Standalone MCP Server
+
+Add to your MCP client config (`.mcp.json` or `claude_desktop_config.json`):
 
 ```json
 {
@@ -54,25 +73,68 @@ Or use the slash command:
 }
 ```
 
-## Scanners
-
-| Scanner | Coverage |
-|---------|---------|
-| Semgrep 5,000+ rules | OWASP Top 10, CWE Top 25, injection, XSS, SSRF, taint |
-| bandit | Python security |
-| ruff | Python quality + security |
-| detect-secrets | API keys, passwords, tokens |
-| pip-audit | Python CVEs (PyPI Advisory DB) |
-| npm audit | Node.js CVEs |
-
-## Publish to PyPI
-
+Or install via pip:
 ```bash
-pip install hatchling build twine
-python -m build
-twine upload dist/*
+pip install shieldbot-mcp
 ```
+
+---
+
+## MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `scan_repository` | Run a full parallel security scan and return a structured JSON report |
+| `check_scanner_tools` | Check which scanners are installed and available |
+
+### `scan_repository` parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_path` | string | required | Absolute path to the repository |
+| `skip_scanners` | list | `[]` | Scanners to skip (e.g. `["ruff", "bandit"]`) |
+| `scan_git_history` | bool | `false` | Also scan git commit history for leaked secrets |
+| `min_severity` | string | `"high"` | Minimum severity to include (`critical`, `high`, `medium`, `low`, `info`) |
+
+---
+
+## Exit Codes (CI/CD Integration)
+
+| Code | Meaning |
+|------|---------|
+| `0` | Clean — no findings above threshold |
+| `1` | Medium+ findings detected |
+| `2` | High+ findings detected |
+| `3` | Critical findings detected |
+
+Use exit codes to gate deployments in GitHub Actions, GitLab CI, or any pipeline.
+
+---
+
+## How It Works
+
+1. **Detect** — Shieldbot profiles the repository (languages, package managers, git history)
+2. **Scan** — All applicable scanners run in parallel via `asyncio.gather()`
+3. **Deduplicate** — Findings are deduplicated by exact hash and proximity (±3 lines)
+4. **Analyze** — Claude synthesizes raw scanner output into prioritized findings with context
+5. **Report** — Structured output with executive summary, risk score, and remediation steps
+
+---
+
+## Requirements
+
+- Python 3.11+
+- [Claude Code](https://claude.ai/code) (for plugin mode)
+- External scanner tools are installed automatically as dependencies
+
+---
+
+## Contributing
+
+Issues and pull requests welcome at [github.com/BalaSriharsha/shieldbot](https://github.com/BalaSriharsha/shieldbot).
+
+---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)

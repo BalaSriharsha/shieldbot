@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jinja2 import Environment, BaseLoader
+from jinja2 import Environment, BaseLoader, select_autoescape
 
 from shieldbot.models import SecurityReport, Severity
 
@@ -188,7 +188,7 @@ function toggle(id) {
 
 def write_html_report(report: SecurityReport, output_file: str) -> None:
     """Render the security report as a self-contained HTML file."""
-    env = Environment(loader=BaseLoader())
+    env = Environment(loader=BaseLoader(), autoescape=select_autoescape(['html', 'xml']))
     env.globals["severity_badge"] = _SEVERITY_BADGE
     template = env.from_string(_HTML_TEMPLATE)
     html = template.render(report=report)

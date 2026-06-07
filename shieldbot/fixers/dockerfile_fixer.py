@@ -25,6 +25,7 @@ import urllib.error
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 
 # ---------------------------------------------------------------------------
@@ -384,6 +385,9 @@ def suggest_base_upgrade(image_ref: str, timeout: int = 10) -> Optional[str]:
             f"https://hub.docker.com/v2/repositories/{namespace}/{name}"
             f"/tags?page_size=25&ordering=last_updated"
         )
+        parsed = urlparse(url)
+        if parsed.scheme not in ("https",):
+            return None
         req = urllib.request.Request(
             url, headers={"User-Agent": "shieldbot-fixer/1.0"}
         )

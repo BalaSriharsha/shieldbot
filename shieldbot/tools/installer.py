@@ -36,6 +36,35 @@ import urllib.request
 import urllib.error
 
 
+def _safe_tar_extractall(tar: tarfile.TarFile, dest: Path) -> None:
+    """Extract tar members safely, rejecting path-traversal and symlink attacks."""
+    for member in tar.getmembers():
+        # Reject absolute paths and parent-directory traversal
+        if member.name.startswith("/") or ".." in member.name.split("/"):
+            continue
+        # Reject symlinks and hardlinks that could point outside dest
+        if member.issym() or member.islnk():
+            continue
+        # Reject members whose resolved path escapes dest
+        resolved = os.path.realpath(dest / member.name)
+        if not str(resolved).startswith(str(dest.resolve()) + os.sep) and resolved != str(dest.resolve()):
+            continue
+        tar.extract(member, path=str(dest), set_attrs=False)
+
+
+def _safe_zip_extractall(zf: zipfile.ZipFile, dest: Path) -> None:
+    """Extract zip members safely, rejecting path-traversal attacks."""
+    for member in zf.infolist():
+        # Reject absolute paths and parent-directory traversal
+        if member.filename.startswith("/") or ".." in member.filename.split("/"):
+            continue
+        # Reject members whose resolved path escapes dest
+        resolved = os.path.realpath(dest / member.filename)
+        if not str(resolved).startswith(str(dest.resolve()) + os.sep) and resolved != str(dest.resolve()):
+            continue
+        zf.extract(member, path=str(dest))
+
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -103,12 +132,25 @@ def _print(msg: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# URL safety helpers
+# ---------------------------------------------------------------------------
+
+def _validate_url(url: str) -> None:
+    """Validate that a URL uses a safe scheme (https only)."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    if parsed.scheme not in ("https",):
+        raise ValueError(f"Unsafe URL scheme: {parsed.scheme}")
+
+
+# ---------------------------------------------------------------------------
 # GitHub releases helpers (no token required, public API)
 # ---------------------------------------------------------------------------
 
 def _github_latest_release(repo: str) -> dict:
     """Fetch the latest release JSON for a GitHub repo via the public API."""
     url = f"https://api.github.com/repos/{repo}/releases/latest"
+    _validate_url(url)
     req = urllib.request.Request(
         url,
         headers={
@@ -163,6 +205,7 @@ async def _download_file(url: str, dest: Path, label: str) -> None:
     _print("  (using Python urllib fallback — no progress bar)")
 
     def _urllib_dl() -> None:
+        _validate_url(url)
         req = urllib.request.Request(
             url, headers={"User-Agent": "shieldbot-installer/1.0"}
         )
@@ -229,7 +272,7 @@ async def install_codeql(force: bool = False) -> Path:
         install_root.parent.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(zip_path) as zf:
-            zf.extractall(install_root.parent)
+            _safe_zip_extractall(zf, install_root.parent)
 
         # Archive extracts to a `codeql/` directory
         extracted = install_root.parent / "codeql"
@@ -374,7 +417,7 @@ async def install_dependabot_cli(force: bool = False) -> Path:
         extract_dir.mkdir()
 
         with tarfile.open(tgz_path, "r:gz") as tf:
-            tf.extractall(extract_dir)
+            _safe_tar_extractall(tf, extract_dir)
 
         # The archive contains a `dependabot` binary (may be at root or in a subdirectory)
         found_bin: Optional[Path] = None
@@ -458,7 +501,7 @@ async def install_trivy(force: bool = False) -> Path:
         extract_dir.mkdir()
 
         with tarfile.open(tgz_path, "r:gz") as tf:
-            tf.extractall(extract_dir)
+            _safe_tar_extractall(tf, extract_dir)
 
         found_bin: Optional[Path] = None
         for candidate in sorted(extract_dir.rglob("trivy")):
